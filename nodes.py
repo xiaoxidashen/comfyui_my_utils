@@ -1,0 +1,7 @@
+# 注册节点
+NODE_CLASS_MAPPINGS = {
+}
+
+# 节点显示名称
+NODE_DISPLAY_NAME_MAPPINGS = {
+}
