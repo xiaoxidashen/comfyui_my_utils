@@ -1,7 +1,7 @@
 from nodes import NODE_CLASS_MAPPINGS as NODE_CLASS_MAPPINGS_all
 import torch
 
-vhs_videocombine = NODE_CLASS_MAPPINGS_all["VHS_VideoCombine"]()
+vhs_videocombine = None
 
 class VideoSplitCombine:
     @classmethod
@@ -32,6 +32,9 @@ class VideoSplitCombine:
     def split_and_combine(self, images, split_num, frame_rate=8, loop_count=0,
                          filename_prefix="SplitVideo", format="image/gif",
                          pingpong=False, save_output=True, audio=None, vae=None, **kwargs):
+        global vhs_videocombine
+        if vhs_videocombine is None:
+            vhs_videocombine = NODE_CLASS_MAPPINGS_all["VHS_VideoCombine"]()
 
         if not isinstance(images, torch.Tensor):
             raise ValueError("输入必须是 torch.Tensor")
