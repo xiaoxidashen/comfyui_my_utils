@@ -1,4 +1,4 @@
-import { app } from "../../../scripts/app.js";
+import {app} from "../../../scripts/app.js";
 
 app.registerExtension({
     name: "VideoSplitCombine.VideoPreview",
@@ -104,14 +104,7 @@ app.registerExtension({
                         }
 
                         // 构建媒体文件的URL
-                        let mediaUrl;
-                        if (gifInfo.type === "output") {
-                            mediaUrl = `/view?filename=${encodeURIComponent(gifInfo.filename)}&type=output&subfolder=${encodeURIComponent(gifInfo.subfolder || "")}`;
-                        } else {
-                            mediaUrl = `/view?filename=${encodeURIComponent(gifInfo.filename)}&type=${gifInfo.type}&subfolder=${encodeURIComponent(gifInfo.subfolder || "")}`;
-                        }
-
-                        mediaElement.src = mediaUrl;
+                        mediaElement.src = `/view?filename=${encodeURIComponent(gifInfo.filename)}&type=${gifInfo.type}&subfolder=${encodeURIComponent(gifInfo.subfolder || "")}`;
 
                         // 创建标签
                         const label = document.createElement("div");
