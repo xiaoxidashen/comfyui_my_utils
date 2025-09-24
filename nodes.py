@@ -47,6 +47,7 @@ class VideoSplitCombine:
         remainder = batch_size % split_num
 
         all_filenames = []
+        all_gifs = []
 
         start_idx = 0
         for i in range(split_num):
@@ -74,23 +75,27 @@ class VideoSplitCombine:
                 **kwargs
             )
 
-            # 收集文件名
+            # 收集文件名和UI信息
             if result and "result" in result:
                 result_tuple = result["result"]
                 if result_tuple and len(result_tuple[0]) >= 2:
                     filenames = result_tuple[0][1]
                     all_filenames.extend(filenames)
 
+                # 收集 UI 中的 gifs 预览信息
+                if "ui" in result and "gifs" in result["ui"]:
+                    gifs_info = result["ui"]["gifs"]
+                    all_gifs.extend(gifs_info)
+
             start_idx = end_idx
 
-        return ((save_output, all_filenames),)
+        # 返回包含 result 和 ui 的字典格式
+        return {
+            "result": ((save_output, all_filenames),),
+            "ui": {"gifs": all_gifs}
+        }
 
 # 注册节点
 NODE_CLASS_MAPPINGS = {
     "VideoSplitCombine": VideoSplitCombine,
-}
-
-# 节点显示名称
-NODE_DISPLAY_NAME_MAPPINGS = {
-    "VideoSplitCombine": "Video Split Combine",
 }
