@@ -2,24 +2,51 @@ import torch
 
 vhs_videocombine = None
 
+try:
+    import importlib
+    nodes_module = importlib.import_module("custom_nodes.comfyui-videohelpersuite.videohelpersuite.nodes")
+    utils_module = importlib.import_module("custom_nodes.comfyui-videohelpersuite.videohelpersuite.utils")
+    get_video_formats = getattr(nodes_module, 'get_video_formats')
+    imageOrLatent = getattr(utils_module, 'imageOrLatent')
+    floatOrInt = getattr(utils_module, 'floatOrInt')
+    ContainsAll = getattr(utils_module, 'ContainsAll')
+except:
+    def get_video_formats():
+        return ["'video/h264-mp4'", "'video/webm'"], {}
+    imageOrLatent = "IMAGE"
+    floatOrInt = "FLOAT"
+    def ContainsAll(x):
+        return x
+
 class VideoSplitCombine:
     @classmethod
     def INPUT_TYPES(s):
+        ffmpeg_formats, format_widgets = get_video_formats()
+        format_widgets["image/webp"] = [['lossless', "BOOLEAN", {'default': True}]]
         return {
             "required": {
-                "images": ("IMAGE",),
+                "images": (imageOrLatent,),
                 "split_num": ("INT", {"default": 1, "min": 1, "max": 100, "step": 1}),
-                "frame_rate": ("FLOAT", {"default": 8, "min": 1, "step": 1}),
+                "frame_rate": (
+                    floatOrInt,
+                    {"default": 8, "min": 1, "step": 1},
+                ),
                 "loop_count": ("INT", {"default": 0, "min": 0, "max": 100, "step": 1}),
                 "filename_prefix": ("STRING", {"default": "SplitVideo"}),
-                "format": (["image/gif", "video/webm", "video/mp4"], {"default": "image/gif"}),
+                "format": (["image/gif", "image/webp"] + ffmpeg_formats, {'formats': format_widgets}),
                 "pingpong": ("BOOLEAN", {"default": False}),
                 "save_output": ("BOOLEAN", {"default": True}),
             },
             "optional": {
                 "audio": ("AUDIO",),
+                "meta_batch": ("VHS_BatchManager",),
                 "vae": ("VAE",),
-            }
+            },
+            "hidden": ContainsAll({
+                "prompt": "PROMPT",
+                "extra_pnginfo": "EXTRA_PNGINFO",
+                "unique_id": "UNIQUE_ID"
+            }),
         }
 
     RETURN_TYPES = ("VHS_FILENAMES",)
@@ -28,13 +55,36 @@ class VideoSplitCombine:
     CATEGORY = "MyUtils"
     FUNCTION = "split_and_combine"
 
-    def split_and_combine(self, images, split_num, frame_rate=8, loop_count=0,
-                         filename_prefix="SplitVideo", format="image/gif",
-                         pingpong=False, save_output=True, audio=None, vae=None, **kwargs):
+    def split_and_combine(
+        self,
+        frame_rate: int,
+        loop_count: int,
+        images=None,
+        latents=None,
+        split_num=1,
+        filename_prefix="SplitVideo",
+        format="image/gif",
+        pingpong=False,
+        save_output=True,
+        prompt=None,
+        extra_pnginfo=None,
+        audio=None,
+        unique_id=None,
+        manual_format_widgets=None,
+        meta_batch=None,
+        vae=None,
+        **kwargs
+    ):
         global vhs_videocombine
         if vhs_videocombine is None:
             from nodes import NODE_CLASS_MAPPINGS as NODE_CLASS_MAPPINGS_all
             vhs_videocombine = NODE_CLASS_MAPPINGS_all["VHS_VideoCombine"]()
+
+        # 处理 images 和 latents 的逻辑，与 VideoCombine 保持一致
+        if latents is not None:
+            images = latents
+        if images is None:
+            return ((save_output, []),)
 
         if not isinstance(images, torch.Tensor):
             raise ValueError("输入必须是 torch.Tensor")
@@ -61,16 +111,22 @@ class VideoSplitCombine:
             # 为每个分割的视频创建唯一的文件名前缀
             split_filename_prefix = f"{filename_prefix}_part{i+1:02d}"
 
-            # 调用原始的 VHS_VideoCombine
+            # 调用原始的 VHS_VideoCombine，传递所有参数
             result = vhs_videocombine.combine_video(
-                images=split_images,
                 frame_rate=frame_rate,
                 loop_count=loop_count,
+                images=split_images,
+                latents=None,
                 filename_prefix=split_filename_prefix,
                 format=format,
                 pingpong=pingpong,
                 save_output=save_output,
+                prompt=prompt,
+                extra_pnginfo=extra_pnginfo,
                 audio=audio,
+                unique_id=unique_id,
+                manual_format_widgets=manual_format_widgets,
+                meta_batch=meta_batch,
                 vae=vae,
                 **kwargs
             )
